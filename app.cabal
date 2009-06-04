@@ -1,0 +1,13 @@
+Name: apprazor
+Version: 0.1
+Author: Kamil Dworakowski
+Copyright: 2009 Kamil Dworakowski
+Stability: Experimental
+Category: Other
+Cabal-version: >= 1.4.0.0
+build-type: Simple
+GHC-Options: -Wall -fno-warn-name-shadowing
+Build-depends: base, mtl, happstack-state, happstack-server
+
+Executable: apprazor
+Main-Is: Main.hs
