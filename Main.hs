@@ -59,7 +59,7 @@ report :: ServerPart String
 report = do
     Just measurement <- getData
     ms <- update (AddMeasurement measurement)
-    let best = foldl min 99999 $ map duration ms
+    let best = foldl min 99999999 $ map duration ms
     return $ if fromIntegral (duration measurement) <= fromIntegral best * 1.1
                 then "PASS"
                 else "FAIL"
