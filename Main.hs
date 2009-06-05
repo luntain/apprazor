@@ -14,6 +14,8 @@ import Control.Monad.Reader
 import Control.Concurrent
 import Data.Monoid
 import Data.Generics
+import Control.Arrow
+import Data.Function
 
 
 data Measurement = Measurement {
@@ -59,10 +61,12 @@ report :: ServerPart String
 report = do
     Just measurement <- getData
     ms <- update (AddMeasurement measurement)
-    let best = foldl min 99999999 $ map duration ms
+    let relevantMs = filter (comparable measurement) ms
+    let best = foldl min 99999999 $ map duration relevantMs
     return $ if fromIntegral (duration measurement) <= fromIntegral best * 1.1
                 then "PASS"
                 else "FAIL"
+    where comparable = (==) `on` (test &&& host)
     
 listMeasurements :: ServerPart String
 listMeasurements = do
