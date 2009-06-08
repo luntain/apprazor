@@ -22,7 +22,6 @@ data Measurement = Measurement {
     test::String,
     duration::Int, --milliseconds
     host::String,
-    run::Int,
     revision::String
 } deriving (Data, Typeable, Show)
 
@@ -31,9 +30,8 @@ instance FromData Measurement where
         test <- look "test"
         duration <- lookRead "duration"
         host <- look "host"
-        run <- lookRead "run"
         revision <- look "revision"
-        return $ Measurement test duration host run revision
+        return $ Measurement test duration host revision
 
 instance Version Measurement
 $(deriveSerialize ''Measurement)
