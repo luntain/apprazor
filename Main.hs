@@ -60,7 +60,7 @@ report = do
     Just measurement <- getData
     ms <- update (AddMeasurement measurement)
     let relevantMs = filter (comparable measurement) ms
-    let best = foldl min 99999999 $ map duration relevantMs
+    let best = foldl' min 99999999 $ map duration relevantMs
     return $ if fromIntegral (duration measurement) <= fromIntegral best * 1.1
                 then "PASS"
                 else "FAIL"
