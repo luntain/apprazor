@@ -4,26 +4,27 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Main where
 
 import Happstack.State
-import Happstack.Server
+import Happstack.Server hiding (Host)
 import Data.Typeable
 import Control.Monad.State (put, get, modify)
 import Control.Monad.Reader
 import Control.Concurrent
 import Data.Monoid
 import Data.Generics
-import Control.Arrow
-import Data.Function
+import qualified Data.Map as Map
 
+type Host = String
+type TestName = String
+type Revision = String
+type Duration = Int
+type Measurement = (Host, TestName, Revision, Duration)
 
-data Measurement = Measurement {
-    test::String,
-    duration::Int, --milliseconds
-    host::String,
-    revision::String
-} deriving (Data, Typeable, Show)
+duration :: Measurement -> Duration
+duration (_,_,_,d) = d
 
 instance FromData Measurement where
     fromData = do
@@ -31,26 +32,29 @@ instance FromData Measurement where
         duration <- lookRead "duration"
         host <- look "host"
         revision <- look "revision"
-        return $ Measurement test duration host revision
+        return (host, test, revision, duration)
 
-instance Version Measurement
-$(deriveSerialize ''Measurement)
+type Measurements = Map.Map (Host, TestName) (Duration, [(Revision, Duration, Bool)])
 
-data State = State {measurements :: [Measurement]} deriving (Typeable)
+data State = State {measurements :: Measurements} deriving (Typeable)
 instance Version State
 $(deriveSerialize ''State)
 
 instance Component State where 
     type Dependencies State = End
-    initialValue = State []
+    initialValue = State $ Map.fromList []
 
-addMeasurement :: Measurement -> Update State [Measurement]
-addMeasurement m = do
+addMeasurement :: Measurement -> Update State Bool
+addMeasurement (host, tname, rev, duration) = do
     State measurements <- get
-    put . State $ m:measurements
-    return (m:measurements)
+    let newmap = upd measurements
+    put . State $ newmap
+    let (_,_,res) = head.snd $ newmap Map.! (host, tname)
+    return res
+    where upd = Map.insertWith upd' (host, tname) (duration, [(rev, duration, True)])
+          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, fromIntegral mdur <= fromIntegral (min mdur duration) * 1.05):ms)
 
-getMeasurements :: Query State [Measurement]
+getMeasurements :: Query State Measurements
 getMeasurements = fmap measurements ask
 
 $(mkMethods ''State ['addMeasurement, 'getMeasurements])
@@ -58,13 +62,10 @@ $(mkMethods ''State ['addMeasurement, 'getMeasurements])
 report :: ServerPart String
 report = do
     Just measurement <- getData
-    ms <- update (AddMeasurement measurement)
-    let relevantMs = filter (comparable measurement) ms
-    let best = foldl' min 99999999 $ map duration relevantMs
-    return $ if fromIntegral (duration measurement) <= fromIntegral best * 1.1
+    res <- update (AddMeasurement measurement)
+    return $ if res
                 then "PASS"
                 else "FAIL"
-    where comparable = (==) `on` (test &&& host)
     
 listMeasurements :: ServerPart String
 listMeasurements = do
@@ -74,7 +75,7 @@ listMeasurements = do
 entryPoint :: Proxy State
 entryPoint = Proxy
 
-controller = dir "report" report `mappend` dir "measurements" listMeasurements
+controller = dir "report" report `mappend` (nullDir >> listMeasurements)
 
 main = do 
     control <- startSystemState entryPoint
