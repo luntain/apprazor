@@ -20,7 +20,7 @@ import qualified Data.Map as Map
 type Host = String
 type TestName = String
 type Revision = String
-type Duration = Int
+type Duration = Float
 type Measurement = (Host, TestName, Revision, Duration)
 
 duration :: Measurement -> Duration
@@ -52,7 +52,7 @@ addMeasurement (host, tname, rev, duration) = do
     let (_,_,res) = head.snd $ newmap Map.! (host, tname)
     return res
     where upd = Map.insertWith upd' (host, tname) (duration, [(rev, duration, True)])
-          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, fromIntegral mdur <= fromIntegral (min mdur duration) * 1.05):ms)
+          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, mdur <= (min mdur duration) * 1.05):ms)
 
 getMeasurements :: Query State Measurements
 getMeasurements = fmap measurements ask
