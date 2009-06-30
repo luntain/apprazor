@@ -69,8 +69,10 @@ report = do
     
 listMeasurements :: ServerPart String
 listMeasurements = do
-    measurments <- query (GetMeasurements)
-    return $ show measurments
+    measurements <- query (GetMeasurements)
+    return . foldr g "" $ Map.toList measurements
+    where g ((host, test), val) = ss host . ss " " . ss test . ss "\n" . shows val . ss "\n\n"
+          ss = showString
 
 entryPoint :: Proxy State
 entryPoint = Proxy
