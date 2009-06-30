@@ -52,7 +52,7 @@ addMeasurement (host, tname, rev, duration) = do
     let (_,_,res) = head.snd $ newmap Map.! (host, tname)
     return res
     where upd = Map.insertWith upd' (host, tname) (duration, [(rev, duration, True)])
-          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, mdur <= (min mdur duration) * 1.05):ms)
+          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, duration <= mdur * 1.05):ms)
 
 getMeasurements :: Query State Measurements
 getMeasurements = fmap measurements ask
