@@ -74,14 +74,26 @@ listMeasurements = do
     where g ((host, test), val) = ss host . ss " " . ss test . ss "\n" . shows val . ss "\n\n"
           ss = showString
 
+
+displayDetails :: String -> String -> ServerPart String
+displayDetails hostName testName = do
+    allMeasurements <- query (GetMeasurements)
+    let measurements = allMeasurements Map.! (hostName, testName)
+    return $ show measurements
+
+
 entryPoint :: Proxy State
 entryPoint = Proxy
 
-controller = dir "report" report `mappend` (nullDir >> listMeasurements)
+controller = dir "report" report  
+    `mappend`  (nullDir >> listMeasurements) 
+    `mappend`  (dir "details" $ path (\hostName -> path (\testName -> displayDetails hostName testName)))
+
 
 main = do 
     control <- startSystemState entryPoint
     tid <- forkIO $ simpleHTTP nullConf $ controller
+    putStrLn "listening on port 8000"
     waitForTermination
     killThread tid
     createCheckpoint control
