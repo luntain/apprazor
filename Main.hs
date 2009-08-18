@@ -14,7 +14,9 @@ import Control.Monad.State (put, get, modify)
 import Control.Monad.Reader
 import Control.Concurrent
 import Data.Monoid
+import Data.Maybe
 import Data.Generics
+import System.Environment
 import qualified Data.Map as Map
 
 type Host = String
@@ -44,15 +46,15 @@ instance Component State where
     type Dependencies State = End
     initialValue = State $ Map.fromList []
 
-addMeasurement :: Measurement -> Update State Bool
-addMeasurement (host, tname, rev, duration) = do
+addMeasurement :: Measurement -> Float -> Update State (Bool, Float)
+addMeasurement (host, tname, rev, duration) margin = do
     State measurements <- get
     let newmap = upd measurements
     put . State $ newmap
-    let (_,_,res) = head.snd $ newmap Map.! (host, tname)
-    return res
+    let (best,  (_, _, res):_) = newmap Map.! (host, tname)
+    return (res, best) 
     where upd = Map.insertWith upd' (host, tname) (duration, [(rev, duration, True)])
-          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, duration <= mdur * 1.05):ms)
+          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, duration <= mdur * (1.0+margin)):ms)
 
 getMeasurements :: Query State Measurements
 getMeasurements = fmap measurements ask
@@ -62,10 +64,12 @@ $(mkMethods ''State ['addMeasurement, 'getMeasurements])
 report :: ServerPart String
 report = do
     Just measurement <- getData
-    res <- update (AddMeasurement measurement)
+    marginInput <- getDataFn $ lookRead "margin"
+    let margin = fromMaybe 0.1 marginInput
+    (res, best) <- update (AddMeasurement measurement margin)
     return $ if res
-                then "PASS"
-                else "FAIL"
+                then "PASS" 
+                else "FAIL\n" ++ show best
     
 listMeasurements :: ServerPart String
 listMeasurements = do
@@ -91,11 +95,16 @@ controller = dir "report" report
 
 
 main = do 
-    control <- startSystemState entryPoint
-    tid <- forkIO $ simpleHTTP nullConf $ controller
-    putStrLn "listening on port 8000"
-    waitForTermination
-    killThread tid
-    createCheckpoint control
-    shutdownSystem control
+    args <- getArgs
+    let stateName = case args of
+         [name] -> name
+         [] -> "apprazor"
+    withProgName stateName $ do
+        control <- startSystemState entryPoint
+        tid <- forkIO $ simpleHTTP nullConf $ controller
+        putStrLn "listening on port 8000"
+        waitForTermination
+        killThread tid
+        createCheckpoint control
+        shutdownSystem control
 
