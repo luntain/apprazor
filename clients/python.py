@@ -1,6 +1,6 @@
 import httplib, urllib
 
-def report(host, revision, test, duration, margin=0.1, server="localhost:8000"):
+def report(host, revision, test, duration, margin=0.1, server="localhost:5003"):
     params = urllib.urlencode({ 'host': host, 'revision': revision,
         'test': test, 'duration': duration, 'margin': margin})
     conn = httplib.HTTPConnection(server)

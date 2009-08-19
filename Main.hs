@@ -91,7 +91,7 @@ entryPoint = Proxy
 
 controller = dir "report" report  
     `mappend`  (nullDir >> listMeasurements) 
-    `mappend`  (dir "details" $ path (\hostName -> path (\testName -> displayDetails hostName testName)))
+    `mappend`  (dir "details" $ path (\testName -> path (\hostName -> displayDetails hostName testName)))
 
 
 main = do 
