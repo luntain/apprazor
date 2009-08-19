@@ -101,8 +101,8 @@ main = do
          [] -> "apprazor"
     withProgName stateName $ do
         control <- startSystemState entryPoint
-        tid <- forkIO $ simpleHTTP nullConf $ controller
-        putStrLn "listening on port 8000"
+        tid <- forkIO $ simpleHTTP (Conf 5003 Nothing) $ controller
+        putStrLn "listening on port 5003"
         waitForTermination
         killThread tid
         createCheckpoint control
