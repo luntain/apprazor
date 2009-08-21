@@ -18,6 +18,8 @@ import Data.Maybe
 import Data.Generics
 import System.Environment
 import qualified Data.Map as Map
+import Text.JSON
+import Data.List
 
 type Host = String
 type TestName = String
@@ -56,42 +58,77 @@ addMeasurement (host, tname, rev, duration) margin = do
     where upd = Map.insertWith upd' (host, tname) (duration, [(rev, duration, True)])
           upd' _ (mdur, ms) = (min mdur duration, (rev, duration, duration <= mdur * (1.0+margin)):ms)
 
+
+deleteResult :: Measurement -> Update State ()
+deleteResult (host, test, revision, dur) = do
+    State measurements <- get
+    put $ State $ Map.adjust g (host, test) measurements
+    where g (best, ms) = let newMs = filter (not.toDelete) ms in (bestResult newMs, newMs)
+          toDelete (r, d, _) = r == revision && d == d
+          bestResult = foldl' max 99999999.0 . map duration 
+          duration (_, d, _) = d
+
+
 getMeasurements :: Query State Measurements
 getMeasurements = fmap measurements ask
 
-$(mkMethods ''State ['addMeasurement, 'getMeasurements])
+$(mkMethods ''State ['addMeasurement, 'getMeasurements, 'deleteResult])
 
-report :: ServerPart String
+report :: ServerPart Response
 report = do
     Just measurement <- getData
     marginInput <- getDataFn $ lookRead "margin"
     let margin = fromMaybe 0.1 marginInput
     (res, best) <- update (AddMeasurement measurement margin)
-    return $ if res
+    return . toResponse $ if res
                 then "PASS" 
                 else "FAIL\n" ++ show best
     
-listMeasurements :: ServerPart String
+listMeasurements :: ServerPart Response
 listMeasurements = do
     measurements <- query (GetMeasurements)
-    return . foldr g "" $ Map.toList measurements
+    return . toResponse . foldr g "" $ Map.toList measurements
     where g ((host, test), val) = ss host . ss " " . ss test . ss "\n" . shows val . ss "\n\n"
           ss = showString
 
 
-displayDetails :: String -> String -> ServerPart String
+displayDetails :: String -> String -> ServerPart Response
 displayDetails hostName testName = do
-    allMeasurements <- query (GetMeasurements)
-    let measurements = allMeasurements Map.! (hostName, testName)
-    return $ show measurements
+    allMeasurements <- query GetMeasurements
+    if (hostName, testName) `Map.member` allMeasurements
+        then fileServeStrict [] "static/test-details.html"
+        else fail $ "no such test or host" ++ show (hostName, testName)
 
+testInfo :: String -> String -> ServerPart Response
+testInfo hostName testName = do
+    allMeasurements <- query GetMeasurements
+    let measurements = allMeasurements Map.! (hostName, testName)
+    return . toResponse $ encode measurements
+
+
+handleRemoveResult :: String -> String -> ServerPart Response
+handleRemoveResult host test = do
+    Just revision <- getDataFn $ look "revision"
+    Just dur <- getDataFn $ lookRead "duration"
+    update (DeleteResult (host, test, revision, dur))
+    return $ toResponse $ "ok" ++ show (revision, dur)
+    
 
 entryPoint :: Proxy State
 entryPoint = Proxy
 
-controller = dir "report" report  
-    `mappend`  (nullDir >> listMeasurements) 
-    `mappend`  (dir "details" $ path (\testName -> path (\hostName -> displayDetails hostName testName)))
+testHostPart test host = msum [
+        (nullDir >> displayDetails host test)
+      , (dir "json" $ testInfo host test)
+      , (dir "remove" $ methodSP POST $ handleRemoveResult host test)
+    ]
+
+controller = msum [
+          dir "report" report  
+        , (dir "static" $ fileServeStrict [] "static")
+        , (nullDir >> listMeasurements)
+        , path (\testName -> path (\hostName -> testHostPart testName hostName))
+    ]
 
 
 main = do 

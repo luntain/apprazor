@@ -1,6 +1,7 @@
 import sys
 sys.path.append("../clients")
 
+import httplib, urllib
 from python import report
 import python
 print "PYTHON PATH", python.__file__
@@ -39,3 +40,15 @@ class TestEverythingThoroughly(object):
         assert not passed
 
 
+    def testRemove(self):
+        report('HOST', '1', 'testRemove', duration=10)
+        self.removeResult('HOST', '1', 'testRemove', duration=10)
+        passed, _ = report('HOST', '1', 'testRemove', duration=10)
+        assert passed
+
+
+    def removeResult(self, host, revision, test, duration):
+        params = urllib.urlencode({'revision': revision, 'duration': duration})
+        conn = httplib.HTTPConnection("localhost:5003")
+        conn.request("POST", "/%s/%s/" % (test, host), params)
+        response = conn.getresponse()
