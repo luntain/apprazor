@@ -1,0 +1,46 @@
+<html>
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+    <script src="/static/lib/functional.js"></script>
+    <script src="/static/lib/to-function.js"></script>
+    <script>
+    Functional.install()
+    String.prototype.supplant = function (o) {
+        return this.replace(/\$(\w*)/g, function (a, b) {
+                var v = o[b];
+                if (v) return v
+                else throw "no value for " + b;
+        });
+    };
+    $(document).ready(function() {
+        $.getJSON('tests', function(data) {
+            var tests = foldl(function(tests, hostTest) {
+                    var name = hostTest[1];
+                    var host = hostTest[0];
+                    if (!tests[name]) {
+                        tests[name] = []
+                    }
+                    tests[name].push(host)
+                    return tests
+                },
+                {},
+                data);
+            var lis = [];
+            for (testName in tests) {
+                var linksByHost = map(function(host) { return '<a href="/$name/$host/">$host</a>'.supplant({'name': testName, 'host': host})
+                    }, tests[testName]);
+                lis.push('<li>$name $hostLinks</li>'.supplant({name: testName, hostLinks: linksByHost.join(" ")}));
+            }
+                
+            $('#tests').append(lis.join(''));
+        });
+    });
+    </script>
+</head>
+<body>
+    Tests
+
+    <ul id='tests'>
+    </ul>
+</body>
+</html>

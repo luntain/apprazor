@@ -91,6 +91,10 @@ listMeasurements = do
     where g ((host, test), val) = ss host . ss " " . ss test . ss "\n" . shows val . ss "\n\n"
           ss = showString
 
+tests :: ServerPart Response
+tests = do
+    measurements <- query (GetMeasurements)
+    return . toResponse . encode . Map.keys $ measurements
 
 displayDetails :: String -> String -> ServerPart Response
 displayDetails hostName testName = do
@@ -103,7 +107,7 @@ testInfo :: String -> String -> ServerPart Response
 testInfo hostName testName = do
     allMeasurements <- query GetMeasurements
     let measurements = allMeasurements Map.! (hostName, testName)
-    return . toResponse $ encode measurements
+    return . toResponse . encode $ measurements
 
 
 handleRemoveResult :: String -> String -> ServerPart Response
@@ -123,10 +127,13 @@ testHostPart test host = msum [
       , (dir "remove" $ methodSP POST $ handleRemoveResult host test)
     ]
 
+
 controller = msum [
           dir "report" report  
         , (dir "static" $ fileServeStrict [] "static")
-        , (nullDir >> listMeasurements)
+        , (nullDir >> fileServeStrict [] "static/index.html")
+        , (dir "tests" tests)
+        , (dir "list" listMeasurements)
         , path (\testName -> path (\hostName -> testHostPart testName hostName))
     ]
 
