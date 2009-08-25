@@ -1,8 +1,8 @@
 <html>
 <head>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
-    <script src="/static/lib/functional.js"></script>
-    <script src="/static/lib/to-function.js"></script>
+    <script src="static/lib/functional.js"></script>
+    <script src="static/lib/to-function.js"></script>
     <script>
     Functional.install()
     String.prototype.supplant = function (o) {
@@ -27,7 +27,7 @@
                 data);
             var lis = [];
             for (testName in tests) {
-                var linksByHost = map(function(host) { return '<a href="/$name/$host/">$host</a>'.supplant({'name': testName, 'host': host})
+                var linksByHost = map(function(host) { return '<a href="$name/$host/">$host</a>'.supplant({'name': testName, 'host': host})
                     }, tests[testName]);
                 lis.push('<li>$name $hostLinks</li>'.supplant({name: testName, hostLinks: linksByHost.join(" ")}));
             }
