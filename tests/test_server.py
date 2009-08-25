@@ -42,7 +42,12 @@ class TestEverythingThoroughly(object):
 
     def testRemove(self):
         report('HOST', '1', 'testRemove', duration=10)
-        self.removeResult('HOST', '1', 'testRemove', duration=10)
+        report('HOST', '1', 'testRemove', duration=1)
+        self.removeResult('HOST', '1', 'testRemove', duration=1)
+
+        passed, _ = report('HOST', '1', 'testRemove', duration=20)
+        assert not passed
+
         passed, _ = report('HOST', '1', 'testRemove', duration=10)
         assert passed
 
@@ -50,5 +55,5 @@ class TestEverythingThoroughly(object):
     def removeResult(self, host, revision, test, duration):
         params = urllib.urlencode({'revision': revision, 'duration': duration})
         conn = httplib.HTTPConnection("localhost:5003")
-        conn.request("POST", "/%s/%s/" % (test, host), params)
+        conn.request("POST", "/%s/%s/remove" % (test, host), params)
         response = conn.getresponse()

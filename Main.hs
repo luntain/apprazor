@@ -64,8 +64,8 @@ deleteResult (host, test, revision, dur) = do
     State measurements <- get
     put $ State $ Map.adjust g (host, test) measurements
     where g (best, ms) = let newMs = filter (not.toDelete) ms in (bestResult newMs, newMs)
-          toDelete (r, d, _) = r == revision && d == d
-          bestResult = foldl' max 99999999.0 . map duration 
+          toDelete (r, d, _) = r == revision && d == dur
+          bestResult = foldl' min 99999999.0 . map duration 
           duration (_, d, _) = d
 
 
