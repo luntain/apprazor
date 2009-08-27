@@ -74,6 +74,7 @@ getMeasurements = fmap measurements ask
 
 $(mkMethods ''State ['addMeasurement, 'getMeasurements, 'deleteResult])
 
+-- deprecated
 report :: ServerPart Response
 report = do
     Just measurement <- getData
@@ -84,6 +85,17 @@ report = do
                 then "PASS" 
                 else "FAIL\n" ++ show best
     
+reportMeasurement :: TestName -> Host -> ServerPart Response
+reportMeasurement test host = do
+    Just revision <- getDataFn $ look "revision"
+    Just duration <- getDataFn $ lookRead "duration"
+    maybeMargin <- getDataFn $ lookRead "margin"
+    let margin = fromMaybe 0.1 maybeMargin
+    (res, best) <- update (AddMeasurement (host, test, revision, duration) margin)
+    return . toResponse $ if res
+                then "PASS" 
+                else "FAIL\n" ++ show best
+
 listMeasurements :: ServerPart Response
 listMeasurements = do
     measurements <- query (GetMeasurements)
@@ -96,14 +108,14 @@ tests = do
     measurements <- query (GetMeasurements)
     return . toResponse . encode . Map.keys $ measurements
 
-displayDetails :: String -> String -> ServerPart Response
+displayDetails :: Host -> TestName -> ServerPart Response
 displayDetails hostName testName = do
     allMeasurements <- query GetMeasurements
     if (hostName, testName) `Map.member` allMeasurements
         then fileServeStrict [] "static/test-details.html"
-        else fail $ "no such test or host" ++ show (hostName, testName)
+        else fail $ "no such test or host" ++ show (testName, hostName)
 
-testInfo :: String -> String -> ServerPart Response
+testInfo :: Host -> TestName -> ServerPart Response
 testInfo hostName testName = do
     allMeasurements <- query GetMeasurements
     let measurements = allMeasurements Map.! (hostName, testName)
@@ -122,18 +134,19 @@ entryPoint :: Proxy State
 entryPoint = Proxy
 
 testHostPart test host = msum [
-        (nullDir >> displayDetails host test)
-      , (dir "json" $ testInfo host test)
-      , (dir "remove" $ methodSP POST $ handleRemoveResult host test)
+        methodSP GET $ displayDetails host test
+      , methodSP POST $ reportMeasurement test host
+      , dir "json" $ testInfo host test
+      , dir "remove" $ methodSP POST $ handleRemoveResult host test
     ]
 
 
 controller = msum [
           dir "report" report  
-        , (dir "static" $ fileServeStrict [] "static")
-        , (nullDir >> fileServeStrict [] "static/index.html")
-        , (dir "tests" tests)
-        , (dir "list" listMeasurements)
+        , dir "static" $ fileServeStrict [] "static"
+        , nullDir >> fileServeStrict [] "static/index.html"
+        , dir "tests" tests
+        , dir "list" listMeasurements
         , path (\testName -> path (\hostName -> testHostPart testName hostName))
     ]
 
