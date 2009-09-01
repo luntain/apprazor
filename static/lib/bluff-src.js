@@ -1261,7 +1261,8 @@ Bluff.Line = new JS.Class(Bluff.Base, {
   _normalize: function() {
     this.maximum_value = Math.max(this.maximum_value, this.baseline_value);
     this.callSuper();
-    if (this.baseline_value !== null) this._norm_baseline = this.baseline_value / this._spread;
+    var spread = this.maximum_value - this.minimum_value;
+    if (this.baseline_value !== null) this._norm_baseline = (this.baseline_value - this.minimum_value) / spread;
   }
 });
 
