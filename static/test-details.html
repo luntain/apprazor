@@ -32,19 +32,33 @@
             $(linkNode).replaceWith("");
         });
     }
-    function drawGraph(durations) {
+    function sparseRevisionLabels(revisions) {
+        var labels = {}
+        var lastSeenRevision = "boo"
+        $.each(revisions, function(i, rev) {
+            if (rev !== lastSeenRevision) {
+                labels[i] = rev;
+                lastSeenRevision = rev;
+            }
+        });
+        return labels;
+    }
+    function drawGraph(durations, revisions) {
         var g = new Bluff.Line('graph', 700);
         g.theme_keynote();
         g.title = 'timings';
         g.hide_legend = true;
         g.data('this test', durations);
+        g.labels = sparseRevisionLabels(revisions)
         g.draw();
     }
     $(document).ready(function() {
         $.getJSON('json', function(data) {
             var bestResult = data[0];
             var results = data[1];
-            drawGraph(map(function(r){return r[1];}, results).reverse());
+            var durations = map(function(res){return res[1];}, results);
+            var revisions = map(function(res){return res[0];}, results)
+            drawGraph(durations.reverse(), revisions.reverse());
             var lis = map(
                 function(result) {
                     var passed = result[2];
