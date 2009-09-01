@@ -43,11 +43,12 @@
         });
         return labels;
     }
-    function drawGraph(durations, revisions) {
+    function drawGraph(durations, revisions, best) {
         var g = new Bluff.Line('graph', 700);
         g.theme_keynote();
         g.title = 'timings';
         g.hide_legend = true;
+        g.baseline_value = best * 1.125
         g.data('this test', durations);
         g.labels = sparseRevisionLabels(revisions)
         g.draw();
@@ -58,7 +59,7 @@
             var results = data[1];
             var durations = map(function(res){return res[1];}, results);
             var revisions = map(function(res){return res[0];}, results)
-            drawGraph(durations.reverse(), revisions.reverse());
+            drawGraph(durations.reverse(), revisions.reverse(), bestResult);
             var lis = map(
                 function(result) {
                     var passed = result[2];
