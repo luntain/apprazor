@@ -3,7 +3,7 @@ import httplib, urllib
 def report(host, revision, test, duration, margin=0.1, server="localhost:5003"):
     params = urllib.urlencode({'revision': revision, 'duration': duration, 'margin': margin})
     conn = httplib.HTTPConnection(server)
-    url = '/' + '/'.join(map(urllib.quote, [test, host]))
+    url = '/' + '/'.join(map(urllib.quote, [test, host, '']))
     conn.request("POST", url, params)
     response = conn.getresponse()
     print response.status, response.reason
@@ -12,7 +12,7 @@ def report(host, revision, test, duration, margin=0.1, server="localhost:5003"):
     if status == 'PASS':
         return (True, '')
     else:
-        return (False, ''.join(dataLines[1:]))
+        return (False, ''.join(dataLines[1:] + [", http://", server, url]))
 
 if __name__ == '__main__':
     report('mrlee', '1234M', 'array recalc perf test', 8772)
