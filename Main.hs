@@ -107,7 +107,7 @@ testInfo hostName testName = do
     return . toResponse . encode $ measurements
 
 
-handleRemoveResult :: String -> String -> ServerPart Response
+handleRemoveResult :: Host -> TestName -> ServerPart Response
 handleRemoveResult host test = do
     Just revision <- getDataFn $ look "revision"
     Just dur <- getDataFn $ lookRead "duration"
