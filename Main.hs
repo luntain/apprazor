@@ -1,10 +1,6 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeFamilies, DeriveDataTypeable, TemplateHaskell,
+             MultiParamTypeClasses, FlexibleContexts,
+             FlexibleInstances, TypeSynonymInstances #-}
 module Main where
 
 import Happstack.State
@@ -74,17 +70,6 @@ getMeasurements = fmap measurements ask
 
 $(mkMethods ''State ['addMeasurement, 'getMeasurements, 'deleteResult])
 
--- deprecated
-report :: ServerPart Response
-report = do
-    Just measurement <- getData
-    marginInput <- getDataFn $ lookRead "margin"
-    let margin = fromMaybe 0.1 marginInput
-    (res, best) <- update (AddMeasurement measurement margin)
-    return . toResponse $ if res
-                then "PASS" 
-                else "FAIL\n" ++ show best
-    
 reportMeasurement :: TestName -> Host -> ServerPart Response
 reportMeasurement test host = do
     Just revision <- getDataFn $ look "revision"
@@ -130,9 +115,6 @@ handleRemoveResult host test = do
     return $ toResponse $ "ok" ++ show (revision, dur)
     
 
-entryPoint :: Proxy State
-entryPoint = Proxy
-
 testHostPart test host = msum [
         methodSP GET $ displayDetails host test
       , methodSP POST $ reportMeasurement test host
@@ -142,11 +124,10 @@ testHostPart test host = msum [
 
 
 controller = msum [
-          dir "report" report  
+          nullDir >> fileServeStrict [] "static/index.html"
         , dir "static" $ fileServeStrict [] "static"
-        , nullDir >> fileServeStrict [] "static/index.html"
-        , dir "tests" tests
-        , dir "list" listMeasurements
+        , dir "tests" tests -- json
+        , dir "list" listMeasurements -- raw page
         , path (\testName -> path (\hostName -> testHostPart testName hostName))
     ]
 
@@ -164,4 +145,6 @@ main = do
         killThread tid
         createCheckpoint control
         shutdownSystem control
+    where entryPoint :: Proxy State
+          entryPoint = Proxy
 
