@@ -8,7 +8,7 @@
     String.prototype.supplant = function (o) {
         return this.replace(/\$(\w*)/g, function (a, b) {
                 var v = o[b];
-                if (v) return v
+                if (v !== undefined) return v
                 else throw "no value for " + b;
         });
     };
