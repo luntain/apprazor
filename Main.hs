@@ -55,8 +55,8 @@ addMeasurement (host, tname, rev, duration) margin = do
           upd' _ (mdur, ms) = (min mdur duration, (rev, duration, duration <= mdur * (1.0+margin)):ms)
 
 
-removeMeasurement :: Measurement -> Update State ()
-removeMeasurement (host, test, revision, dur) = do
+deleteResult :: Measurement -> Update State ()
+deleteResult (host, test, revision, dur) = do
     State measurements <- get
     put $ State $ Map.adjust g (host, test) measurements
     where g (best, ms) = let newMs = filter (not.toDelete) ms in (bestResult newMs, newMs)
@@ -68,7 +68,7 @@ removeMeasurement (host, test, revision, dur) = do
 getMeasurements :: Query State Measurements
 getMeasurements = fmap measurements ask
 
-$(mkMethods ''State ['addMeasurement, 'removeMeasurement, 'getMeasurements])
+$(mkMethods ''State ['addMeasurement, 'getMeasurements, 'deleteResult])
 
 reportMeasurement :: TestName -> Host -> ServerPart Response
 reportMeasurement test host = do
@@ -111,7 +111,7 @@ handleRemoveResult :: Host -> TestName -> ServerPart Response
 handleRemoveResult host test = do
     Just revision <- getDataFn $ look "revision"
     Just dur <- getDataFn $ lookRead "duration"
-    update (RemoveMeasurement (host, test, revision, dur))
+    update (DeleteResult (host, test, revision, dur))
     return $ toResponse $ "ok" ++ show (revision, dur)
     
 
