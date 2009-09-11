@@ -1,6 +1,7 @@
 <html>
 <head>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+    <script src="../../static/common.js"></script>
     <script src="../../static/lib/functional.js"></script>
     <script src="../../static/lib/to-function.js"></script>
     <script src="../../static/lib/js-class.js"></script>
@@ -19,39 +20,11 @@
     </style>
     <script>
     Functional.install()
-    String.prototype.supplant = function (o) {
-        return this.replace(/\$(\w*)/g, function (a, b) {
-                var v = o[b];
-                if (v !== undefined) return v
-                else throw "no value for " + b;
-        });
-    };
     function removeResult(linkNode, rev, duration) {
         $.post('remove', {revision: rev, duration: duration}, function() {
             $(linkNode).parent().addClass('removed');
             $(linkNode).replaceWith("");
         });
-    }
-    function sparseRevisionLabels(revisions) {
-        var labels = {}
-        var lastSeenRevision = "boo"
-        $.each(revisions, function(i, rev) {
-            if (rev !== lastSeenRevision) {
-                labels[i] = rev;
-                lastSeenRevision = rev;
-            }
-        });
-        return labels;
-    }
-    function drawGraph(durations, revisions, best) {
-        var g = new Bluff.Line('graph', 700);
-        g.theme_keynote();
-        g.title = 'timings';
-        g.hide_legend = true;
-        g.baseline_value = best * 1.125
-        g.data('this test', durations);
-        g.labels = sparseRevisionLabels(revisions)
-        g.draw();
     }
     $(document).ready(function() {
         $.getJSON('json', function(data) {
@@ -59,7 +32,7 @@
             var results = data[1];
             var durations = map(function(res){return res[1];}, results);
             var revisions = map(function(res){return res[0];}, results)
-            drawGraph(durations.reverse(), revisions.reverse(), bestResult);
+            drawGraph(durations.reverse(), revisions.reverse(), bestResult, 'timings');
             var lis = map(
                 function(result) {
                     var passed = result[2];
@@ -75,7 +48,9 @@
     </script>
 </head>
 <body>
-    <canvas id='graph'></canvas>
+    <a href="..">^ See all hosts that ran this test<a>
+    <p>
+    <canvas id='timings'></canvas>
 
     <h4>Test Results, newest first</h4>
 

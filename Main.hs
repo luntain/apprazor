@@ -6,9 +6,10 @@ module Main where
 import Happstack.State
 import Happstack.Server hiding (Host)
 import Data.Typeable
+import Control.Arrow
+import Control.Concurrent
 import Control.Monad.State (put, get, modify)
 import Control.Monad.Reader
-import Control.Concurrent
 import Data.Monoid
 import Data.Maybe
 import Data.Generics
@@ -106,6 +107,15 @@ testInfo hostName testName = do
     let measurements = allMeasurements Map.! (hostName, testName)
     return . toResponse . encode $ measurements
 
+justTestInfo :: TestName -> ServerPart Response
+justTestInfo testName = do
+    allMeasurements <- query GetMeasurements
+    return . toResponse . encode . map (first fst) . filter ((==testName).snd.fst) . Map.toList $ allMeasurements
+
+justTest :: TestName -> ServerPart Response
+justTest testName = (nullDir >> fileServeStrict [] "static/test.html") 
+          `mappend` (dir "json" $ methodSP GET $ justTestInfo testName)
+
 
 handleRemoveResult :: Host -> TestName -> ServerPart Response
 handleRemoveResult host test = do
@@ -128,7 +138,7 @@ controller = msum [
         , dir "static" $ fileServeStrict [] "static"
         , dir "tests" tests -- json
         , dir "list" listMeasurements -- raw page
-        , path (\testName -> path (\hostName -> testHostPart testName hostName))
+        , path (\testName -> justTest testName `mappend` path (\hostName -> testHostPart testName hostName))
     ]
 
 
