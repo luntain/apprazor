@@ -16,7 +16,12 @@ function sparseRevisionLabels(revisions) {
     });
     return labels;
 }
-function drawGraph(durations, revisions, best, margin, title) {
+function drawGraph(testData, title) {
+    var best = testData[0];
+    var margin = testData[1];
+    var results = testData[2];
+    var durations = map(function(res){return res[1];}, results).reverse();
+    var revisions = map(function(res){return res[0];}, results).reverse();
     var g = new Bluff.Line(title, 700);
     g.theme_keynote();
     g.title = title;

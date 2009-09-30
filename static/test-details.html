@@ -28,12 +28,8 @@
     }
     $(document).ready(function() {
         $.getJSON('json', function(data) {
-            var bestResult = data[0];
-            var margin = data[1];
+            drawGraph(data, 'timings');
             var results = data[2];
-            var durations = map(function(res){return res[1];}, results);
-            var revisions = map(function(res){return res[0];}, results)
-            drawGraph(durations.reverse(), revisions.reverse(), bestResult, margin, 'timings');
             var lis = map(
                 function(result) {
                     var passed = result[2];
