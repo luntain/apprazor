@@ -16,12 +16,13 @@
                 var testData = this[1];
 
                 var bestResult = testData[0];
-                var results = testData[1];
+                var margin = testData[1];
+                var results = testData[2];
                 var durations = map(function(res){return res[1];}, results);
                 var revisions = map(function(res){return res[0];}, results)
                 $('body').append('<p><canvas id="$id"></canvas>'.supplant({'id': host}))
                 $('body').append('<a href="$id/">see details of $id >></a>'.supplant({'id': host}))
-                drawGraph(durations.reverse(), revisions.reverse(), bestResult, host);
+                drawGraph(durations.reverse(), revisions.reverse(), bestResult, margin, host);
             });
         });
     });

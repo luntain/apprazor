@@ -23,6 +23,8 @@ type TestName = String
 type Revision = String
 type Duration = Float
 type Measurement = (Host, TestName, Revision, Duration)
+type Margin = Float
+defaultMargin = 0.125
 
 duration :: Measurement -> Duration
 duration (_,_,_,d) = d
@@ -35,13 +37,21 @@ instance FromData Measurement where
         revision <- look "revision"
         return (host, test, revision, duration)
 
-type Measurements = Map.Map (Host, TestName) (Duration, [(Revision, Duration, Bool)])
+type Measurements0 = Map.Map (Host, TestName) (Duration, [(Revision, Duration, Bool)])
+type Measurements = Map.Map (Host, TestName) (Duration, Margin, [(Revision, Duration, Bool)])
 
+data State0 = State0 Measurements0 deriving (Typeable)
 data State = State {measurements :: Measurements} deriving (Typeable)
-instance Version State
+instance Version State0
+$(deriveSerialize ''State0)
+instance Version State where
+    mode = extension 1 (Proxy :: Proxy State0)
 $(deriveSerialize ''State)
 
-instance Component State where 
+instance Migrate State0 State where
+    migrate (State0 ms) = State (Map.map (\(x, y) -> (x, defaultMargin, y)) ms)
+
+instance Component State where
     type Dependencies State = End
     initialValue = State $ Map.fromList []
 
@@ -50,19 +60,19 @@ addMeasurement (host, tname, rev, duration) margin = do
     State measurements <- get
     let newmap = upd measurements
     put . State $ newmap
-    let (best,  (_, _, res):_) = newmap Map.! (host, tname)
-    return (res, best) 
-    where upd = Map.insertWith upd' (host, tname) (duration, [(rev, duration, True)])
-          upd' _ (mdur, ms) = (min mdur duration, (rev, duration, duration <= mdur * (1.0+margin)):ms)
+    let (best,  _, (_, _, res):_) = newmap Map.! (host, tname)
+    return (res, best)
+    where upd = Map.insertWith upd' (host, tname) (duration, margin, [(rev, duration, True)])
+          upd' _ (mdur, _, ms) = (min mdur duration, margin, (rev, duration, duration <= mdur * (1.0+margin)):ms)
 
 
 deleteResult :: Measurement -> Update State ()
 deleteResult (host, test, revision, dur) = do
     State measurements <- get
     put $ State $ Map.adjust g (host, test) measurements
-    where g (best, ms) = let newMs = filter (not.toDelete) ms in (bestResult newMs, newMs)
+    where g (best, margin, ms) = let newMs = filter (not.toDelete) ms in (bestResult newMs, margin, newMs)
           toDelete (r, d, _) = r == revision && d == dur
-          bestResult = foldl' min 99999999.0 . map duration 
+          bestResult = foldl' min 99999999.0 . map duration
           duration (_, d, _) = d
 
 
@@ -76,10 +86,10 @@ reportMeasurement test host = do
     Just revision <- getDataFn $ look "revision"
     Just duration <- getDataFn $ lookRead "duration"
     maybeMargin <- getDataFn $ lookRead "margin"
-    let margin = fromMaybe 0.1 maybeMargin
+    let margin = fromMaybe defaultMargin maybeMargin
     (res, best) <- update (AddMeasurement (host, test, revision, duration) margin)
     return . toResponse $ if res
-                then "PASS" 
+                then "PASS"
                 else "FAIL\n" ++ show best
 
 listMeasurements :: ServerPart Response
@@ -113,7 +123,7 @@ justTestInfo testName = do
     return . toResponse . encode . map (first fst) . filter ((==testName).snd.fst) . Map.toList $ allMeasurements
 
 justTest :: TestName -> ServerPart Response
-justTest testName = (nullDir >> fileServeStrict [] "static/test.html") 
+justTest testName = (nullDir >> fileServeStrict [] "static/test.html")
           `mappend` (dir "json" $ methodSP GET $ justTestInfo testName)
 
 
@@ -123,7 +133,7 @@ handleRemoveResult host test = do
     Just dur <- getDataFn $ lookRead "duration"
     update (DeleteResult (host, test, revision, dur))
     return $ toResponse $ "ok" ++ show (revision, dur)
-    
+
 
 testHostPart test host = msum [
         methodSP GET $ displayDetails host test
@@ -142,7 +152,7 @@ controller = msum [
     ]
 
 
-main = do 
+main = do
     args <- getArgs
     let stateName = case args of
          [name] -> name
