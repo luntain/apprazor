@@ -100,9 +100,7 @@ listMeasurements = do
           ss = showString
 
 tests :: ServerPart Response
-tests = do
-    measurements <- query (GetMeasurements)
-    return . toResponse . encode . Map.keys $ measurements
+tests = fmap (toResponse . encode . Map.keys) (query GetMeasurements)
 
 displayDetails :: Host -> TestName -> ServerPart Response
 displayDetails hostName testName = do
