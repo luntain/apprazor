@@ -34,7 +34,8 @@
                 function(result) {
                     var passed = result[2];
                     return '<li class="$klass">revision: $rev, duration: $duration \
-                        <a href="#" style="text-decoration: none" onclick="removeResult(this, \'$rev\', $duration)">(-)</a></li>'
+                        <a href="#" style="text-decoration: none" \
+                        onclick="removeResult(this, \'$rev\', $duration)"title="remove">(-)</a></li>'
                         .supplant({rev: result[0], duration: result[1], klass: passed && 'pass' || 'fail'});
                 },
                 results
