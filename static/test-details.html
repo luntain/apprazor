@@ -24,6 +24,12 @@
         a.remove-link:hover {
             color: red;
         }
+        a#up-link {
+            text-decoration: none;
+        }
+        span.hosts-symbol {
+            font-size: 1.2em;
+        }
     </style>
     <script>
     Functional.install()
@@ -32,6 +38,7 @@
             $(linkNode).parent().addClass('removed');
             $(linkNode).replaceWith("");
         });
+        return false;
     }
     $(document).ready(function() {
         $.getJSON('json', function(data) {
@@ -42,7 +49,7 @@
                     var passed = result[2];
                     return '<li class="$klass">revision: $rev, duration: $duration \
                         <a href="#" class="remove-link" \
-                        onclick="removeResult(this, \'$rev\', $duration)"title="remove">&#10008;</a></li>'
+                        onclick="removeResult(this, \'$rev\', $duration);" title="remove">&#10008;</a></li>'
                         .supplant({rev: result[0], duration: result[1], klass: passed && 'pass' || 'fail'});
                 },
                 results
@@ -53,7 +60,7 @@
     </script>
 </head>
 <body>
-    <a href="..">^ See all hosts that ran this test<a>
+    <a href=".." id='up-link'><span class='hosts-symbol'>&#8679;</span><u>See all hosts that ran this test</u><a>
     <p>
     <canvas id='timings'></canvas>
 
