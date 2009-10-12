@@ -7,6 +7,15 @@
     <script src="../static/lib/js-class.js"></script>
     <script src="../static/lib/excanvas.js"></script>
     <script src="../static/lib/bluff-src.js"></script>
+    <style>
+        .arrow {
+            font-size: 1.8em;
+            vertical-align: middle;
+        }
+        a {
+            text-decoration: none;
+        }
+    </style>
     <script>
     Functional.install()
     $(document).ready(function() {
@@ -16,7 +25,7 @@
                 var testData = this[1];
 
                 $('body').append('<p><canvas id="$id"></canvas>'.supplant({'id': host}))
-                $('body').append('<a href="$id/">see details of $id >></a>'.supplant({'id': host}))
+                $('body').append('<a href="$id/"><u>see details of $id</u> <span class="arrow">&#8680;</span></a>'.supplant({'id': host}))
                 drawGraph(testData, host);
             });
         });
