@@ -13,6 +13,8 @@ function drawGraph(testData, title) {
     var revisions = map(function(res){return res[0];}, results).reverse();
     var baseline = best * (1+margin);
     var baselinePoints = [[revisions[0], baseline ], [revisions[revisions.length-1], baseline]]
-    var options = {}
-    $.plot($("#"+title), [baselinePoints, zip(revisions, durations)], options)
+    var options = { }
+    var points = {data: zip(revisions, durations),
+                  points: {show: true}, lines: {show: true}}
+    $.plot($("#"+title), [{data: baselinePoints, color: "red"}, points], options)
 }
