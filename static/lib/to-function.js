@@ -69,9 +69,9 @@
  * >> '[].slice.call(arguments, 0)'.call(null,1,2) -> [1, 2]
  */
 String.prototype.lambda = function() {
-    var params = [],
-        expr = this,
-        sections = expr.ECMAsplit(/\s*->\s*/m);
+    var params = [];
+    var expr = this;
+    var sections = expr.ECMAsplit(/\s*->\s*/m);
     if (sections.length > 1) {
         while (sections.length) {
             expr = sections.pop();
@@ -82,8 +82,9 @@ String.prototype.lambda = function() {
         params = '_';
     } else {
         // test whether an operator appears on the left (or right), respectively
-        var leftSection = expr.match(/^\s*(?:[+*\/%&|\^\.=<>]|!=)/m),
-            rightSection = expr.match(/[+\-*\/%&|\^\.=<>!]\s*$/m);
+        var leftSection = expr.match(/^\s*(?:[+*\/%&|\^\.=<>]|!=)/m);
+
+        var rightSection = expr.match(/[+\-*\/%&|\^\.=<>!]\s*$/m);
         if (leftSection || rightSection) {
             if (leftSection) {
                 params.push('$1');
@@ -107,16 +108,18 @@ String.prototype.lambda = function() {
 }
 
 /// Turn on caching for `string` -> `Function` conversion.
-String.prototype.lambda.cache = function() {
-    var proto = String.prototype,
-        cache = {},
-        uncached = proto.lambda,
-        cached = function() {
-	        var key = '#' + this; // avoid hidden properties on Object.prototype
-	        return cache[key] || (cache[key] = uncached.call(this));
-        };
-    cached.cached = function(){};
-    cached.uncache = function(){proto.lambda = uncached};
+String.prototype.lambda.cache = () => {
+    var proto = String.prototype;
+    var cache = {};
+    var uncached = proto.lambda;
+
+    var cached = function() {
+        var key = '#' + this; // avoid hidden properties on Object.prototype
+        return cache[key] || (cache[key] = uncached.call(this));
+    };
+
+    cached.cached = () => {};
+    cached.uncache = () => {proto.lambda = uncached};
     proto.lambda = cached;
 }
 
@@ -141,9 +144,9 @@ String.prototype.apply = function(thisArg, args) {
  * >> 'x+1'.call(null, 2) -> 3
  * >> '/'.call(null, 2, 4) -> 0.5
  */
-String.prototype.call = function() {
-    return this.toFunction().apply(arguments[0],
-                                   Array.prototype.slice.call(arguments, 1));
+String.prototype.call = function(...args) {
+    return this.toFunction().apply(args[0],
+                                   Array.prototype.slice.call(args, 1));
 }
 
 /// ^^ Coercion
@@ -192,9 +195,7 @@ Function.prototype.toFunction = function() {
  * >> Functional.K('a string')() -> "a string"
  * >> Function.toFunction('"a string"')() -> "a string"
  */
-Function.toFunction = function(value) {
-    return value.toFunction();
-}
+Function.toFunction = value => value.toFunction()
 
 // Utilities
 
@@ -206,15 +207,15 @@ String.prototype.ECMAsplit =
     ('ab'.split(/a*/).length > 1
      ? String.prototype.split
      : function(separator, limit) {
-         if (typeof limit != 'undefined')
-             throw "ECMAsplit: limit is unimplemented";
-         var result = this.split.apply(this, arguments),
-             re = RegExp(separator),
-             savedIndex = re.lastIndex,
-             match = re.exec(this);
-         if (match && match.index == 0)
-             result.unshift('');
-         // in case `separator` was already a RegExp:
-         re.lastIndex = savedIndex;
-         return result;
-     });
+    if (typeof limit != 'undefined')
+        throw "ECMAsplit: limit is unimplemented";
+    var result = this.split(...arguments);
+    var re = RegExp(separator);
+    var savedIndex = re.lastIndex;
+    var match = re.exec(this);
+    if (match && match.index == 0)
+        result.unshift('');
+    // in case `separator` was already a RegExp:
+    re.lastIndex = savedIndex;
+    return result;
+});
